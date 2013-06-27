@@ -1,16 +1,34 @@
 (ns nepse-data.core
   (:require [me.raynes.laser :as l]
-            [clj-http.client :as http]))
+            [clj-http.client :as http]
+            [clojure.string :as str]))
 
 (def latest-share-url "http://nepalstock.com/datanepse/index.php")
 
-(defn market-open? []
+(defn market-open?
+  "Returns true if the website says its open, false otherwise."
+  []
   (let [html (l/parse (:body (http/get latest-share-url)))
         marketcl (l/select html
                            (l/class= "marketcl"))]
     (if (empty? marketcl)
       true
       false)))
+
+(defn live-data []
+  (let [html (l/parse (:body (http/get latest-share-url)))
+        marquee (-> html
+                    (l/select (l/element= "marquee"))
+                    first)]
+    (->> marquee
+         :content
+         (remove #(= (:tag %) :img))
+         (map l/text)
+         (partition 3)
+         (map str/join)
+         (map #(re-find #"(\S+) (\d+) \( +(\S+) \) \( +(\S+) \)" %))
+         (map #(zipmap [:symbol :latest-trade-price :total-share :net-change-in-rs]
+                       (map parse-string (drop 1 %)))))))
 
 (defn market-info
   []
@@ -23,19 +41,19 @@
                   (-> idx
                       (l/select (l/element= "td"))
                       (#(map l/text %))
-                      (#(map clojure.string/trim %))))
+                      (#(map str/trim %))))
         [nepse sensitive] (-> market-info-table
                               (l/select (l/class= "row1"))
                               (l/zip)
                               (#(map tr->vec %)))
         index-data (fn [idx]
                      {:current (-> (second idx)
-                                   read-string)
+                                   parse-string)
                       :points-change (-> (nth idx 2)
-                                         read-string)
+                                         parse-string)
                       :percent-change (-> (nth idx 3)
-                                          (clojure.string/replace #"%" "")
-                                          read-string)})]
+                                          (str/replace #"%" "")
+                                          parse-string)})]
     {:nepse (index-data nepse)
      :sensitive (index-data sensitive)}))
 
@@ -58,9 +76,9 @@
                       (nth posn)
                       :content
                       first
-                      (clojure.string/replace #"," "")
-                      (Integer/parseInt)))
+                      parse-string))
         date (-> html)]
+    (prn title-row-vals)
     (map (fn [company]
            {:company (-> company
                          :content
@@ -76,7 +94,7 @@
                               first
                               :attrs
                               :href
-                              (clojure.string/split #"=")
+                              (str/split #"=")
                               second)
             :number-transactions (figures company 2)
             :max-price (figures company 3)
@@ -97,15 +115,6 @@
       (#(map :content %))
       (#(map last %))))
 
-(defn parse-rupees
-  "Returns the extracted numerical value from a string in the format Rs.50 or Rs. 50."
-  [string]
-  (-> (clojure.string/split string #"Rs. *")
-      second
-      (clojure.string/replace #"," "")
-      read-string
-      int))
-
 (defn stock-details [stock-symbol]
   (let [base-url "http://nepalstock.com/companydetail.php?StockSymbol=%s"
         stock-page (l/parse (:body (http/get (format base-url stock-symbol))))
@@ -123,39 +132,32 @@
                         (l/select (l/class= "row1"))
                         first)
         second-table-vals (tr-values second-table)]
-    (prn second-table-vals)
     {:last-traded (first first-table-vals)
-     :last-trade-price (Integer/parseInt (second first-table-vals))
+     :last-trade-price (parse-string (second first-table-vals))
      :net-change-in-rs (-> first-table-vals
                            (nth 2)
-                           parse-rupees)
+                           parse-string)
      :percent-change (-> first-table-vals
                          (nth 3)
-                         read-string)
+                         parse-string)
      :high (-> first-table-vals
                (nth 4)
-               parse-rupees)
+               parse-string)
      :low (-> first-table-vals
               (nth 5)
-              parse-rupees)
+              parse-string)
      :previous-close (-> first-table-vals
                          (nth 6)
-                         parse-rupees)
+                         parse-string)
      :symbol (last first-table-vals)
      :listed-shares (-> (first second-table-vals)
-                        (clojure.string/replace #"," "")
-                        read-string)
+                        parse-string)
      :paid-up-value (-> (second second-table-vals)
-                        parse-rupees)
+                        parse-string)
      :total-paid-up-value (-> (nth second-table-vals 2)
-                              parse-rupees)
+                              parse-string)
      :closing-market-price (-> (nth second-table-vals 3)
-                               parse-rupees)
+                               parse-string)
      :market-capitalization (-> (nth second-table-vals 4)
-                                parse-rupees)
+                                parse-string)
      :market-capitalization-date (last second-table-vals)}))
-
-(defn foo
-  "I don't do a whole lot."
-  [x]
-  (println x "Hello, World!"))
