@@ -12,6 +12,33 @@
       true
       false)))
 
+(defn market-info
+  []
+  (let [html (l/parse (:body (http/get latest-share-url)))
+        market-info-table (-> html
+                              (l/select (l/class= "dataTable"))
+                              (nth 2)
+                              l/zip)
+        tr->vec (fn [idx]
+                  (-> idx
+                      (l/select (l/element= "td"))
+                      (#(map l/text %))
+                      (#(map clojure.string/trim %))))
+        [nepse sensitive] (-> market-info-table
+                              (l/select (l/class= "row1"))
+                              (l/zip)
+                              (#(map tr->vec %)))
+        index-data (fn [idx]
+                     {:current (-> (second idx)
+                                   read-string)
+                      :points-change (-> (nth idx 2)
+                                         read-string)
+                      :percent-change (-> (nth idx 3)
+                                          (clojure.string/replace #"%" "")
+                                          read-string)})]
+    {:nepse (index-data nepse)
+     :sensitive (index-data sensitive)}))
+
 (defn all-traded []
   (let [html (l/parse (:body (http/get latest-share-url)))
         title-row (-> html
