@@ -59,52 +59,38 @@
 
 (defn all-traded []
   (let [html (l/parse (:body (http/get latest-share-url)))
-        title-row (-> html
-                      (l/select (l/class= "dataTable"))
-                      first
-                      l/zip
-                      (l/select (l/class= "rowtitle1")))
-        title-row-vals (tr-values title-row)
-        transactions (-> html
+        trades-table (-> html
                          (l/select (l/class= "dataTable"))
                          first
-                         l/zip
-                         (l/select (l/class= "row1")))
-        figures (fn [company posn]
-                  (-> company
-                      :content
-                      (nth posn)
-                      :content
-                      first
-                      parse-string))
-        date (-> html)]
-    (prn title-row-vals)
-    (map (fn [company]
-           {:company (-> company
-                         :content
-                         second
-                         :content
-                         first
-                         :content
-                         first)
-            :stock-symbol (-> company
-                              :content
-                              second
-                              :content
-                              first
-                              :attrs
-                              :href
-                              (str/split #"=")
-                              second)
-            :number-transactions (figures company 2)
-            :max-price (figures company 3)
-            :min-price (figures company 4)
-            :closing-price (figures company 5)
-            :total-share (figures company 6)
-            :amount (figures company 7)
-            :previous-closing (figures company 8)
-            :difference-in-rs (figures company 9)})
-         transactions)))
+                         l/zip)
+        tr->vec (fn [row]
+                  (-> row
+                      (l/select (l/element= "td"))
+                      (#(map l/text %))
+                      (#(map str/trim %))
+                      vec))
+        stock-symbols (map #(-> %
+                               :content
+                               second
+                               :content
+                               first
+                               :attrs
+                               :href
+                               (str/split #"=")
+                               second)
+                           (-> trades-table
+                               (l/select (l/class= "row1"))))
+        rows (-> trades-table
+                (l/select (l/class= "row1"))
+                (l/zip)
+                (#(map tr->vec %))
+                (#(map conj % stock-symbols)))]
+    (map #(zipmap [:company          :number-transactions
+                   :max-price        :min-price
+                   :closing-price    :total-shares
+                   :amount           :previous-closing
+                   :difference-in-rs :stock-symbol]
+                  (map parse-string (drop 1 %))) rows)))
 
 (defn tr-values
   "Returns the values in a HTML table row."
