@@ -5,22 +5,33 @@
   (:use nepse-data.utils))
 
 (def latest-share-url "http://nepalstock.com/datanepse/index.php")
+(def html (atom nil))
+(def market-close (atom false))
+
+(def update-html
+  (future (loop []
+            (reset! html (l/parse (:body (http/get latest-share-url))))
+            (reset! last-fetch (System/currentTimeMillis))
+            (if @market-close
+              (Thread/sleep (* 60000 60 21))
+              (Thread/sleep 60000))
+            (recur))))
 
 (defn market-open?
   "Returns true if the website says its open, false otherwise."
   []
-  (let [html (l/parse (:body (http/get latest-share-url)))
-        marketcl (l/select html
+  (let [marketcl (l/select @html
                            (l/class= "marketcl"))]
     (if (empty? marketcl)
       true
       false)))
 
 (defn live-data []
-  (let [html (l/parse (:body (http/get latest-share-url)))
-        marquee (-> html
+  (let [marquee (-> @html
                     (l/select (l/element= "marquee"))
-                    first)]
+                    first)
+        date (second (first (re-seq  #"As of ((\d{4})-(\d{2})-(\d{2}))"
+                                     (node-text marquee))))]
     (->> marquee
          :content
          (remove #(= (:tag %) :img))
@@ -30,12 +41,13 @@
          (map #(re-find #"(\S+) (\d+) \( +(\S+) \) \( +(\S+) \)" %))
          (map #(zipmap [:symbol :latest-trade-price
                         :total-share :net-change-in-rs]
-                       (map parse-string (drop 1 %)))))))
+                       (map parse-string (drop 1 %))))
+         (map #(assoc % :as-of date))
+)))
 
 (defn market-info
   []
-  (let [html (l/parse (:body (http/get latest-share-url)))
-        market-info-table (-> html
+  (let [market-info-table (-> @html
                               (l/select (l/class= "dataTable"))
                               (nth 2)
                               l/zip)
@@ -55,8 +67,7 @@
      :sensitive (index-data sensitive)}))
 
 (defn all-traded []
-  (let [html (l/parse (:body (http/get latest-share-url)))
-        trades-table (-> html
+  (let [trades-table (-> @html
                          (l/select (l/class= "dataTable"))
                          first
                          l/zip)
