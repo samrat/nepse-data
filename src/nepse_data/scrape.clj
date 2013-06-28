@@ -7,10 +7,17 @@
 (def latest-share-url "http://nepalstock.com/datanepse/index.php")
 (def html (atom (l/parse (:body (http/get latest-share-url)))))
 (def market-close (atom false))
+(def previous-closings (atom
+                        (zipmap (map :stock-symbol (all-traded))
+                                (map :previous-closing (all-traded)))))
 
 (def update-html
   (future (loop []
             (reset! html (l/parse (:body (http/get latest-share-url))))
+            (reset! previous-closings
+                    (atom
+                     (zipmap (map :stock-symbol (all-traded))
+                             (map :previous-closing (all-traded)))))
             (if @market-close
               (Thread/sleep (* 60000 60 21))
               (Thread/sleep 60000))
@@ -37,11 +44,22 @@
          (map l/text)
          (partition 3)
          (map str/join)
-         (map #(re-find #"(\S+) (\d+) \( +(\S+) \) \( +(\S+) \)" %))
-         (map #(zipmap [:symbol :latest-trade-price
+         (map #(re-find #"(\S+) (\S+) \( +(\S+) \) \( +(\S+) \)" %))
+         (map #(zipmap [:stock-symbol :latest-trade-price
                         :total-share :net-change-in-rs]
                        (map parse-string (drop 1 %))))
-         (map #(assoc % :as-of date)))))
+         (map #(assoc % :as-of date))
+         (map (fn [stock]
+                (let [sym (get stock :stock-symbol)
+                      diff-rs (get stock :net-change-in-rs)
+                      previous-closing (or (get @previous-closings sym)
+                                           (:previous-closing (stock-details sym)))]
+                  (swap! previous-closings assoc sym
+                         previous-closing)
+                  (assoc stock :percent-change
+                         (* 100. (try (/ diff-rs
+                                         previous-closing)
+                                      (catch Exception _ 0.0))))))))))
 
 (defn market-info
   []
@@ -108,6 +126,7 @@
 
 (defn stock-details
   [stock-symbol]
+  (prn stock-symbol)
   (let [base-url "http://nepalstock.com/companydetail.php?StockSymbol=%s"
         stock-page (l/parse (:body (http/get (format base-url stock-symbol))))
         first-table (-> stock-page
@@ -131,7 +150,7 @@
     (zipmap [:last-traded-date :last-trade-price
              :net-change-in-rs :percent-change
              :high             :low
-             :previous-close   :stock-symbol
+             :previous-closing   :stock-symbol
              :listed-shares    :paid-up-value
              :total-paid-up-value :closing-market-price
              :market-capitalization :market-capitalization-date]
