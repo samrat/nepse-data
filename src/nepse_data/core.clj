@@ -5,7 +5,7 @@
   (:use nepse-data.utils))
 
 (def latest-share-url "http://nepalstock.com/datanepse/index.php")
-(def html (atom nil))
+(def html (atom (l/parse (:body (http/get latest-share-url)))))
 (def market-close (atom false))
 
 (def update-html
@@ -42,8 +42,7 @@
          (map #(zipmap [:symbol :latest-trade-price
                         :total-share :net-change-in-rs]
                        (map parse-string (drop 1 %))))
-         (map #(assoc % :as-of date))
-)))
+         (map #(assoc % :as-of date)))))
 
 (defn market-info
   []
@@ -61,10 +60,16 @@
                       :points-change (-> (nth idx 2)
                                          parse-string)
                       :percent-change (-> (nth idx 3)
-                                          (str/replace #"%" "")
-                                          parse-string)})]
+                                          parse-string)})
+        date (->> @html
+                  first
+                  node-text
+                  (re-seq #"As of ((\d{4})-(\d{2})-(\d{2}))")
+                  (#(nth % 2)) ;; third appearance
+                  second)]
     {:nepse (index-data nepse)
-     :sensitive (index-data sensitive)}))
+     :sensitive (index-data sensitive)
+     :as-of date}))
 
 (defn all-traded []
   (let [trades-table (-> @html
@@ -86,13 +91,21 @@
                 (l/select (l/class= "row1"))
                 (l/zip)
                 (#(map tr->vec %))
-                (#(map conj % stock-symbols)))]
-    (map #(zipmap [:company          :number-transactions
-                   :max-price        :min-price
-                   :closing-price    :total-shares
-                   :amount           :previous-closing
-                   :difference-in-rs :stock-symbol]
-                  (map parse-string (drop 1 %))) rows)))
+                (#(map conj % stock-symbols)))
+        date (->> @html
+                  first
+                  node-text
+                  (re-seq #"As of ((\d{4})-(\d{2})-(\d{2}))")
+                  second ;; the first appearance is at inside the <marquee>
+                  second)]
+    (->> (map #(zipmap [:company          :number-transactions
+                        :max-price        :min-price
+                        :closing-price    :total-shares
+                        :amount           :previous-closing
+                        :difference-in-rs :stock-symbol]
+                      (map parse-string (drop 1 %)))
+             rows)
+        (map #(assoc % :as-of date)))))
 
 (defn stock-details
   [stock-symbol]
