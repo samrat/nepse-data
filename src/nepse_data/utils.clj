@@ -17,13 +17,14 @@
   50% or 50 %"
   [string]
   (-> (str/split string #" *%")
-      second
+      first
       (str/replace #"," "")
       read-string
       float))
 
 (defn parse-string [string]
   (cond (.startsWith string "Rs.") (parse-rupees string)
+        (.startsWith string "-") (read-string string)
         (.endsWith string "%") (parse-percentage string)
         (re-find #"\-" string) string ;; dates
         (re-find #"\d+" string) (-> string
