@@ -1,4 +1,4 @@
-(ns nepse-data.core
+(ns nepse-data.scrape
   (:require [me.raynes.laser :as l]
             [clj-http.client :as http]
             [clojure.string :as str])
@@ -11,7 +11,6 @@
 (def update-html
   (future (loop []
             (reset! html (l/parse (:body (http/get latest-share-url))))
-            (reset! last-fetch (System/currentTimeMillis))
             (if @market-close
               (Thread/sleep (* 60000 60 21))
               (Thread/sleep 60000))

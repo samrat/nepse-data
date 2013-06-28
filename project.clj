@@ -5,4 +5,7 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.5.1"]
                  [me.raynes/laser "1.1.1"]
-                 [clj-http "0.7.3"]])
+                 [clj-http "0.7.3"]
+                 [compojure "1.1.5"]
+                 [ring/ring-jetty-adapter "1.1.6"]
+                 [ring/ring-json "0.2.0"]])
