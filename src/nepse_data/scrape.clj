@@ -5,13 +5,26 @@
   (:use nepse-data.utils))
 
 (def latest-share-url "http://nepalstock.com/datanepse/index.php")
-(def html (atom (l/parse (:body (http/get latest-share-url)))))
-(def market-close (atom false))
-(def previous-closings (atom
-                        (zipmap (map :stock-symbol (all-traded))
-                                (map :previous-closing (all-traded)))))
+(def html
+  ^{:doc "Caches parsed HTML of latest-share-url. A thread updates this(see
+  update-html."}
+  (atom (l/parse (:body (http/get latest-share-url)))))
+
+(def market-close
+  ^{:doc "Stores the market status in order to estimate how frequently the @html atom needs to get updated."}
+  (atom false))
+
+(def previous-closings
+  ^{:doc "Stores closing prices on the last trading day to calculate the
+  percent change. The marquee ticker has the price change in rupees."}
+  (atom
+   (zipmap (map :stock-symbol (all-traded))
+           (map :previous-closing (all-traded)))))
 
 (def update-html
+  ^{:doc "Updates html and previous closings in a separate thread. Whether the
+  market was open or close in the last check determines when to make
+  the next check."}
   (future (loop []
             (reset! html (l/parse (:body (http/get latest-share-url))))
             (reset! previous-closings
