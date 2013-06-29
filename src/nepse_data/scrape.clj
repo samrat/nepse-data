@@ -5,32 +5,30 @@
   (:use nepse-data.utils))
 
 (def latest-share-url "http://nepalstock.com/datanepse/index.php")
+
+(defn get-html
+  "Pulls and parses html"
+  []
+  (-> (http/get latest-share-url)
+      :body
+      l/parse))
+
 (def html
   ^{:doc "Caches parsed HTML of latest-share-url. A thread updates this(see
   update-html."}
-  (atom (l/parse (:body (http/get latest-share-url)))))
+  (atom (get-html)))
 
 (def market-close
-  ^{:doc "Stores the market status in order to estimate how frequently the @html atom needs to get updated."}
+  ^{:doc "Stores the market status in order to estimate how frequently the
+  @html atom needs to get updated."}
   (atom false))
 
-(def previous-closings
-  ^{:doc "Stores closing prices on the last trading day to calculate the
-  percent change. The marquee ticker has the price change in rupees."}
-  (atom
-   (zipmap (map :stock-symbol (all-traded))
-           (map :previous-closing (all-traded)))))
-
 (def update-html
-  ^{:doc "Updates html and previous closings in a separate thread. Whether the
-  market was open or close in the last check determines when to make
+  ^{:doc "Updates html in a separate thread. Whether the
+  market was open or closed in the last check determines when to make
   the next check."}
   (future (loop []
-            (reset! html (l/parse (:body (http/get latest-share-url))))
-            (reset! previous-closings
-                    (atom
-                     (zipmap (map :stock-symbol (all-traded))
-                             (map :previous-closing (all-traded)))))
+            (reset! html (get-html))
             (if @market-close
               (Thread/sleep (* 60000 60 21))
               (Thread/sleep 60000))
@@ -45,12 +43,23 @@
       true
       false)))
 
-(defn live-data []
+(defn live-data
+  "If market is open, returns live data. Otherwise, the data returned
+  is the same as that of all-traded. To see if market is open, use
+  market-open?"
+  []
   (let [marquee (-> @html
                     (l/select (l/element= "marquee"))
                     first)
-        date (second (first (re-seq  #"As of ((\d{4})-(\d{2})-(\d{2}))"
-                                     (node-text marquee))))]
+        datetime (->> marquee
+                      node-text
+                      (#(str/replace % "\u00a0" ""))
+                      (re-seq
+                       #"As of ((\d{4})-(\d{2})-(\d{2}) *(\d{2}):(\d{2}):(\d{2}))")
+                      first
+                      (drop 2)
+                      (apply format "%s-%s-%sT%s:%s:%s+05:45")
+                      )]
     (->> marquee
          :content
          (remove #(= (:tag %) :img))
@@ -61,18 +70,14 @@
          (map #(zipmap [:stock-symbol :latest-trade-price
                         :total-share :net-change-in-rs]
                        (map parse-string (drop 1 %))))
-         (map #(assoc % :as-of date))
-         (map (fn [stock]
-                (let [sym (get stock :stock-symbol)
-                      diff-rs (get stock :net-change-in-rs)
-                      previous-closing (or (get @previous-closings sym)
-                                           (:previous-closing (stock-details sym)))]
-                  (swap! previous-closings assoc sym
-                         previous-closing)
-                  (assoc stock :percent-change
-                         (* 100. (try (/ diff-rs
-                                         previous-closing)
-                                      (catch Exception _ 0.0))))))))))
+         (map #(assoc % :as-of datetime))
+         (map #(assoc % :percent-change
+                      (try (* 100.
+                              (/ (get % :net-change-in-rs)
+                                 (- (get % :latest-trade-price)
+                                    (get % :net-change-in-rs)
+                                    )))
+                           (catch Exception _ 0)))))))
 
 (defn market-info
   []
@@ -101,7 +106,10 @@
      :sensitive (index-data sensitive)
      :as-of date}))
 
-(defn all-traded []
+(defn all-traded
+  "Returns trading data from the last trading day. To obtain live data
+  when market is open, see live-data."
+  []
   (let [trades-table (-> @html
                          (l/select (l/class= "dataTable"))
                          first
@@ -138,6 +146,7 @@
         (map #(assoc % :as-of date)))))
 
 (defn stock-details
+  "Returns details for a given stock symbol."
   [stock-symbol]
   (prn stock-symbol)
   (let [base-url "http://nepalstock.com/companydetail.php?StockSymbol=%s"
