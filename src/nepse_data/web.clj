@@ -12,7 +12,9 @@
   (route/resources "/")
   (GET "/market-status" [] (response (nepse/market-status)))
   (GET "/live-data" [] (response (nepse/live-data)))
-  (GET "/stock-details/:symbol" [symbol] (response (nepse/stock-details symbol)))
+  (GET "/all-traded" [] (response (nepse/all-traded)))
+  (GET "/stock-details/:symbol" [symbol] (response (nepse/stock-details
+                                                    symbol)))
   ;;(route/not-found (layout/four-oh-four))
   )
 

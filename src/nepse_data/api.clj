@@ -2,6 +2,10 @@
   (:require [cheshire.core :refer :all]
             [nepse-data.scrape :as scrape]))
 
+(defn all-traded
+  []
+  (scrape/all-traded))
+
 (defn market-status
   []
   {:market-open (scrape/market-open?)})
