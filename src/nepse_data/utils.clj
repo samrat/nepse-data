@@ -27,7 +27,8 @@
         (.startsWith string "-") (read-string string)
         (.endsWith string "%") (parse-percentage string)
         (re-find #"\-" string) string ;; dates
-        (re-find #"\d+" string) (-> string
+        (and (re-find #"\d+" string)
+             (not (re-find #"\S+" string))) (-> string
                                     (str/replace #"," "")
                                     read-string)
         :else string))
