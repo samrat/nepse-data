@@ -48,36 +48,39 @@
   is the same as that of all-traded. To see if market is open, use
   market-open?"
   []
-  (let [marquee (-> @html
-                    (l/select (l/element= "marquee"))
-                    first)
-        datetime (->> marquee
-                      node-text
-                      (#(str/replace % "\u00a0" ""))
-                      (re-seq
-                       #"As of ((\d{4})-(\d{2})-(\d{2}) *(\d{2}):(\d{2}):(\d{2}))")
-                      first
-                      (drop 2)
-                      (apply format "%s-%s-%sT%s:%s:%s+05:45"))]
-    (->> marquee
-         :content
-         (remove #(= (:tag %) :img))
-         (map l/text)
-         (partition 3)
-         (map str/join)
-         (map #(re-find #"(\S+) (\S+) \( +(\S+) \) \( +(\S+) \)" %))
-         (map #(zipmap [:stock-symbol :latest-trade-price
-                        :total-share :net-change-in-rs]
-                       (map parse-string (drop 1 %))))
-         (map #(assoc % :as-of datetime))
-         (map #(assoc % :percent-change
-                      (try
-                        (with-precision 3
-                                (* 100M
-                                   (/ (get % :net-change-in-rs)
-                                      (- (get % :latest-trade-price)
-                                         (get % :net-change-in-rs)))))
-                           (catch Exception _ 0)))))))
+  (if (market-open?)
+    (let [marquee (-> @html
+                      (l/select (l/element= "marquee"))
+                      first)
+          datetime (->> marquee
+                        node-text
+                        (#(str/replace % "\u00a0" ""))
+                        (re-seq
+                         #"As of ((\d{4})-(\d{2})-(\d{2}) *(\d{2}):(\d{2}):(\d{2}))")
+                        first
+                        (drop 2)
+                        (apply format "%s-%s-%sT%s:%s:%s+05:45"))]
+      {:market-open true
+       :datetime datetime
+       :transactions (->> marquee
+                    :content
+                    (remove #(= (:tag %) :img))
+                    (map l/text)
+                    (partition 3)
+                    (map str/join)
+                    (map #(re-find #"(\S+) (\S+) \( +(\S+) \) \( +(\S+) \)" %))
+                    (map #(zipmap [:stock-symbol  :latest-trade-price
+                                   :shares-traded :net-change-in-rs]
+                                  (map parse-string (drop 1 %))))
+                    (map #(assoc % :percent-change
+                                 (try
+                                   (with-precision 3
+                                     (* 100M
+                                        (/ (get % :net-change-in-rs)
+                                           (- (get % :latest-trade-price)
+                                              (get % :net-change-in-rs)))))
+                                   (catch Exception _ 0)))))})
+    {:market-open false}))
 
 (defn market-info
   []
@@ -104,7 +107,8 @@
                   second)]
     {:nepse (index-data nepse)
      :sensitive (index-data sensitive)
-     :as-of date}))
+     :as-of date
+     :market-open (market-open?)}))
 
 (defn all-traded
   "Returns trading data from the last trading day. To obtain live data
@@ -136,14 +140,20 @@
                   (re-seq #"As of ((\d{4})-(\d{2})-(\d{2}))")
                   second ;; the first appearance is at inside the <marquee>
                   second)]
-    (->> (map #(zipmap [:company          :number-transactions
-                        :max-price        :min-price
-                        :closing-price    :total-shares
-                        :amount           :previous-closing
-                        :difference-in-rs :stock-symbol]
-                      (map parse-string (drop 1 %)))
-             rows)
-        (map #(assoc % :as-of date)))))
+    {:date date
+     :transactions (->> (map #(zipmap [:company          :number-transactions
+                                       :max-price        :min-price
+                                       :closing-price    :total-shares
+                                       :amount           :previous-closing
+                                       :difference-in-rs :stock-symbol]
+                                      (map parse-string (drop 1 %)))
+                             rows)
+                        (map #(assoc % :percent-change
+                                     (try
+                                       (with-precision 3
+                                         (* 100M (/ (get % :difference-in-rs)
+                                                    (get % :previous-closing))))
+                                          (catch Exception _ 0)))))}))
 
 (defn stock-details
   "Returns details for a given stock symbol."
