@@ -1,10 +1,11 @@
 (ns nepse-data.web
   (:use [compojure.core :only (defroutes GET)]
-        [ring.adapter.jetty :as ring]
         [ring.middleware.json]
-        [ring.util.response])
+        [ring.util.response]
+        [org.httpkit.server :only [run-server]])
   (:require [compojure.route :as route]
             [compojure.handler :as handler]
+            [ring.middleware.reload :as reload]
             [nepse-data.api :as nepse]))
 
 (defroutes routes
@@ -16,12 +17,10 @@
   )
 
 (def application (-> (handler/site routes)
-                     wrap-json-response))
+                     wrap-json-response
+                     reload/wrap-reload))
 
-(defn start [port]
-  (run-jetty application {:port port :join? false}))
-
-(defn -main []
+(defn -main [& args]
   (let [port (Integer/parseInt 
                (or (System/getenv "PORT") "8080"))]
-  (start port)))
+    (run-server application {:port port :join? false})))

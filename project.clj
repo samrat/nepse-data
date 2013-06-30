@@ -7,5 +7,7 @@
                  [me.raynes/laser "1.1.1"]
                  [clj-http "0.7.3"]
                  [compojure "1.1.5"]
-                 [ring/ring-jetty-adapter "1.1.6"]
-                 [ring/ring-json "0.2.0"]])
+                 [ring/ring-json "0.2.0"]
+                 [ring/ring-devel "1.1.8"]
+                 [http-kit "2.0.0"]]
+  :main nepse-data.web)
