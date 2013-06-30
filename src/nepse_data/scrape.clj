@@ -158,7 +158,6 @@
 (defn stock-details
   "Returns details for a given stock symbol."
   [stock-symbol]
-  (prn stock-symbol)
   (let [base-url "http://nepalstock.com/companydetail.php?StockSymbol=%s"
         stock-page (l/parse (:body (http/get (format base-url stock-symbol))))
         ;; there are two tables in the stock details page.
@@ -188,3 +187,28 @@
              :total-paid-up-value :closing-market-price
              :market-capitalization :market-capitalization-date]
             (map parse-string all-vals))))
+
+(defn ninety-days-info
+  "Show trading details for stock-symbol in the last 90 days."
+  [stock-symbol]
+  (let [base-url "http://nepalstock.com/datanepse/stockWisePrices.php"
+        soup (http/post base-url {:form-params {"StockSymbol" stock-symbol
+                                                "Submit" "Submit"}})
+        parsed (l/parse (:body soup))
+        trading-info-table (-> parsed
+                               (l/select (l/class= "dataTable"))
+                               second
+                               l/zip)
+        rows (-> trading-info-table
+                 (l/select (l/class= "row1"))
+                 l/zip
+                 (#(map tr->vec %)))]
+    (reduce (fn [m row]
+              (assoc m (parse-string (first row))
+                     (zipmap [:date                :total-transactions
+                              :total-traded-shares :total-traded-amount
+                              :open-price          :max-price
+                              :min-price           :close-price]
+                             (map parse-string (rest row)))))
+            {}
+            rows)))
