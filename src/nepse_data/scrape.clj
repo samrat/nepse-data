@@ -58,8 +58,7 @@
                        #"As of ((\d{4})-(\d{2})-(\d{2}) *(\d{2}):(\d{2}):(\d{2}))")
                       first
                       (drop 2)
-                      (apply format "%s-%s-%sT%s:%s:%s+05:45")
-                      )]
+                      (apply format "%s-%s-%sT%s:%s:%s+05:45"))]
     (->> marquee
          :content
          (remove #(= (:tag %) :img))
@@ -72,11 +71,12 @@
                        (map parse-string (drop 1 %))))
          (map #(assoc % :as-of datetime))
          (map #(assoc % :percent-change
-                      (try (* 100.
-                              (/ (get % :net-change-in-rs)
-                                 (- (get % :latest-trade-price)
-                                    (get % :net-change-in-rs)
-                                    )))
+                      (try
+                        (with-precision 3
+                                (* 100M
+                                   (/ (get % :net-change-in-rs)
+                                      (- (get % :latest-trade-price)
+                                         (get % :net-change-in-rs)))))
                            (catch Exception _ 0)))))))
 
 (defn market-info
@@ -151,6 +151,7 @@
   (prn stock-symbol)
   (let [base-url "http://nepalstock.com/companydetail.php?StockSymbol=%s"
         stock-page (l/parse (:body (http/get (format base-url stock-symbol))))
+        ;; there are two tables in the stock details page.
         first-table (-> stock-page
                         (l/select (l/class= "dataTable"))
                         first
