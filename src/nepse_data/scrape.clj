@@ -54,7 +54,7 @@
                       first)
           datetime (->> marquee
                         node-text
-                        (#(str/replace % "\u00a0" ""))
+                        (#(str/replace % "\u00a0" "")) ;; nbsp characters
                         (re-seq
                          #"As of ((\d{4})-(\d{2})-(\d{2}) *(\d{2}):(\d{2}):(\d{2}))")
                         first
@@ -199,16 +199,26 @@
                                (l/select (l/class= "dataTable"))
                                second
                                l/zip)
+        company (-> trading-info-table
+                     (l/select (l/class= "rowtitle1"))
+                     first
+                     node-text
+                     (.trim)
+                     (str/split #"\(")
+                     first
+                     (.trim))
         rows (-> trading-info-table
                  (l/select (l/class= "row1"))
                  l/zip
                  (#(map tr->vec %)))]
-    (reduce (fn [m row]
-              (assoc m (parse-string (first row))
-                     (zipmap [:date                :total-transactions
-                              :total-traded-shares :total-traded-amount
-                              :open-price          :max-price
-                              :min-price           :close-price]
-                             (map parse-string (rest row)))))
-            {}
-            rows)))
+    (-> (reduce (fn [m row]
+                  (assoc m (first row)
+                         (zipmap [:date                :total-transactions
+                                  :total-traded-shares :total-traded-amount
+                                  :open-price          :max-price
+                                  :min-price           :close-price]
+                                 (map parse-string (rest row)))))
+                {}
+                rows)
+        (assoc :company company)
+        (assoc :stock-symbol stock-symbol))))
