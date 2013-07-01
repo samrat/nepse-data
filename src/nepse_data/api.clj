@@ -17,3 +17,7 @@
 (defn stock-details
   [symbol]
   (scrape/stock-details symbol))
+
+(defn ninety-days-info
+  [sym]
+  (scrape/ninety-days-info sym))
