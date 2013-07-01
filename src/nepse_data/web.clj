@@ -1,7 +1,8 @@
 (ns nepse-data.web
   (:use [compojure.core :only (defroutes GET)]
-        [ring.middleware.json]
-        [ring.util.response]
+        ring.middleware.json
+        ring.middleware.cors
+        ring.util.response
         [org.httpkit.server :only [run-server]])
   (:require [compojure.route :as route]
             [compojure.handler :as handler]
@@ -15,12 +16,16 @@
   (GET "/all-traded" [] (response (nepse/all-traded)))
   (GET "/stock-details/:symbol" [symbol] (response (nepse/stock-details
                                                     symbol)))
+  (GET "/ninety-days-info/:symbol" [symbol] (response (nepse/ninety-days-info
+                                                       symbol)))
   ;;(route/not-found (layout/four-oh-four))
   )
 
 (def application (-> (handler/site routes)
                      wrap-json-response
-                     reload/wrap-reload))
+                     reload/wrap-reload
+                     (wrap-cors
+                      :access-control-allow-origin #".+")))
 
 (defn -main [& args]
   (let [port (Integer/parseInt 
