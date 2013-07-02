@@ -7,16 +7,17 @@
   (:require [compojure.route :as route]
             [compojure.handler :as handler]
             [ring.middleware.reload :as reload]
-            [nepse-data.api :as nepse]))
+            [nepse-data.scrape :as scrape]))
 
 (defroutes routes
   (route/resources "/")
-  (GET "/market-status" [] (response (nepse/market-status)))
-  (GET "/live-data" [] (response (nepse/live-data)))
-  (GET "/last-trading-day" [] (response (nepse/last-trading-day)))
-  (GET "/stock-details/:symbol" [symbol] (response (nepse/stock-details
+  (GET "/market-status" [] (response {:market-open (scrape/market-open?)}))
+  (GET "/live-data" [] (response (scrape/live-data)))
+  (GET "/market-info" [] (response (scrape/market-info)))
+  (GET "/last-trading-day" [] (response (scrape/last-trading-day)))
+  (GET "/stock-details/:symbol" [symbol] (response (scrape/stock-details
                                                     symbol)))
-  (GET "/ninety-days-info/:symbol" [symbol] (response (nepse/ninety-days-info
+  (GET "/ninety-days-info/:symbol" [symbol] (response (scrape/ninety-days-info
                                                        symbol)))
   ;;(route/not-found (layout/four-oh-four))
   )

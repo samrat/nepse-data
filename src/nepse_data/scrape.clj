@@ -31,7 +31,7 @@
             (reset! html (get-html))
             (if @market-close
               (Thread/sleep (* 60000 60 21))
-              (Thread/sleep 60000))
+              (Thread/sleep 30000))
             (recur))))
 
 (defn market-open?
@@ -215,7 +215,7 @@
                          (zipmap [:date                :total-transactions
                                   :total-traded-shares :total-traded-amount
                                   :open-price          :max-price
-                                  :min-price           :close-price]
+                                  :min-price           :closing-price]
                                  (map parse-string (rest row)))))
                 {}
                 rows)
