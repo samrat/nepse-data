@@ -34,21 +34,21 @@
                         :as-of "2013-06-27"
                         :market-open false})))
 
-(deftest test-all-traded
+(deftest test-last-trading-day
   (reset! html (l/parse (slurp "test/datanepse20130629.html")))
-  (is (= (count (:transactions (all-traded))) 88))
-  (is (= (:date (all-traded)) "2013-06-27"))
-  (is (= (first (:transactions (all-traded))) {:stock-symbol "ACEDBL",
+  (is (= (count (:transactions (last-trading-day))) 88))
+  (is (= (:date (last-trading-day)) "2013-06-27"))
+  (is (= (first (:transactions (last-trading-day))) {:stock-symbol "ACEDBL",
                                                :previous-closing 106,
                                                :min-price 108,
                                                :closing-price 108,
                                                :difference-in-rs 2,
                                                :number-transactions 2,
                                                :amount 133272,
-                                               :total-shares 1234,
+                                               :shares-traded 1234,
                                                :percent-change 1.89M,
                                                :max-price 108,
                                                :company "Ace Development Bank Limited"}))
   (is (= (map :stock-symbol (filter #(> (:percent-change %) 5)
-                                    (:transactions (all-traded))))
+                                    (:transactions (last-trading-day))))
          ["ILFC" "SIFC" "UFIL" "ZFL"])))

@@ -44,9 +44,8 @@
       false)))
 
 (defn live-data
-  "If market is open, returns live data. Otherwise, the data returned
-  is the same as that of all-traded. To see if market is open, use
-  market-open?"
+  "If market is open, returns a map containing live data. Otherwise
+  returns {:market-open false}"
   []
   (if (market-open?)
     (let [marquee (-> @html
@@ -110,7 +109,7 @@
      :as-of date
      :market-open (market-open?)}))
 
-(defn all-traded
+(defn last-trading-day
   "Returns trading data from the last trading day. To obtain live data
   when market is open, see live-data."
   []
@@ -143,7 +142,7 @@
     {:date date
      :transactions (->> (map #(zipmap [:company          :number-transactions
                                        :max-price        :min-price
-                                       :closing-price    :total-shares
+                                       :closing-price    :shares-traded
                                        :amount           :previous-closing
                                        :difference-in-rs :stock-symbol]
                                       (map parse-string (drop 1 %)))

@@ -2,9 +2,9 @@
   (:require [cheshire.core :refer :all]
             [nepse-data.scrape :as scrape]))
 
-(defn all-traded
+(defn last-trading-day
   []
-  (scrape/all-traded))
+  (scrape/last-trading-day))
 
 (defn market-status
   []

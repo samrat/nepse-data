@@ -13,7 +13,7 @@
   (route/resources "/")
   (GET "/market-status" [] (response (nepse/market-status)))
   (GET "/live-data" [] (response (nepse/live-data)))
-  (GET "/all-traded" [] (response (nepse/all-traded)))
+  (GET "/last-trading-day" [] (response (nepse/last-trading-day)))
   (GET "/stock-details/:symbol" [symbol] (response (nepse/stock-details
                                                     symbol)))
   (GET "/ninety-days-info/:symbol" [symbol] (response (nepse/ninety-days-info
