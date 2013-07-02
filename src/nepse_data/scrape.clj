@@ -2,7 +2,8 @@
   (:require [me.raynes.laser :as l]
             [clj-http.client :as http]
             [clojure.string :as str])
-  (:use nepse-data.utils))
+  (:use nepse-data.utils
+        [clojure.tools.logging :only [info]]))
 
 (def latest-share-url "http://nepalstock.com/datanepse/index.php")
 
@@ -29,8 +30,10 @@
   the next check."}
   (future (loop []
             (reset! html (get-html))
+            (info "Fetched HTML from /datanepse/index.php")
             (if @market-close
-              (Thread/sleep (* 60000 60 21))
+              (do (info "Going to sleep for 21 hours")
+                  (Thread/sleep (* 60000 60 21)))
               (Thread/sleep 30000))
             (recur))))
 
