@@ -1,7 +1,8 @@
 (ns nepse-data.scrape
   (:require [me.raynes.laser :as l]
             [clj-http.client :as http]
-            [clojure.string :as str])
+            [clojure.string :as str]
+            [clojure.core.memoize :as memo])
   (:use nepse-data.utils
         [clojure.tools.logging :only [info]]))
 
@@ -191,37 +192,41 @@
              :market-capitalization :market-capitalization-date]
             (map parse-string all-vals))))
 
-(defn ninety-days-info
-  "Show trading details for stock-symbol in the last 90 days."
-  [stock-symbol]
-  (let [base-url "http://nepalstock.com/datanepse/stockWisePrices.php"
-        soup (http/post base-url {:form-params {"StockSymbol" stock-symbol
-                                                "Submit" "Submit"}})
-        parsed (l/parse (:body soup))
-        trading-info-table (-> parsed
-                               (l/select (l/class= "dataTable"))
-                               second
-                               l/zip)
-        company (-> trading-info-table
-                     (l/select (l/class= "rowtitle1"))
-                     first
-                     node-text
-                     (.trim)
-                     (str/split #"\(")
-                     first
-                     (.trim))
-        rows (-> trading-info-table
-                 (l/select (l/class= "row1"))
-                 l/zip
-                 (#(map tr->vec %)))]
-    (-> (reduce (fn [m row]
-                  (assoc m (first row)
-                         (zipmap [:date                :total-transactions
-                                  :total-traded-shares :total-traded-amount
-                                  :open-price          :max-price
-                                  :min-price           :closing-price]
-                                 (map parse-string (rest row)))))
-                {}
-                rows)
-        (assoc :company company)
-        (assoc :stock-symbol stock-symbol))))
+(def ninety-days-info
+  ^{:doc "Show trading details for stock-symbol in the last 90 days."}
+  (memo/ttl
+   (fn [stock-symbol]
+     (let [base-url "http://nepalstock.com/datanepse/stockWisePrices.php"
+           soup (http/post base-url {:form-params {"StockSymbol" stock-symbol
+                                                   "Submit" "Submit"}})
+           parsed (l/parse (:body soup))
+           trading-info-table (-> parsed
+                                  (l/select (l/class= "dataTable"))
+                                  second
+                                  l/zip)
+           company (-> trading-info-table
+                       (l/select (l/class= "rowtitle1"))
+                       first
+                       node-text
+                       (.trim)
+                       (str/split #"\(")
+                       first
+                       (.trim))
+           rows (-> trading-info-table
+                    (l/select (l/class= "row1"))
+                    l/zip
+                    (#(map tr->vec %)))]
+       (-> (reduce (fn [m row]
+                     (assoc m (first row)
+                            (zipmap [:date                :total-transactions
+                                     :total-traded-shares :total-traded-amount
+                                     :open-price          :max-price
+                                     :min-price           :closing-price]
+                                    (map parse-string (rest row)))))
+                   {}
+                   rows)
+           (assoc :company company)
+           (assoc :stock-symbol stock-symbol))))
+   :ttl/threshold (if (market-open?)
+                    (* 1000 60 5)
+                    (* 1000 60 60 3))))

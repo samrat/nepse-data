@@ -11,6 +11,7 @@
                  [ring/ring-devel "1.1.8"]
                  [http-kit "2.0.0"]
                  [ring-cors "0.1.0"]
+                 [org.clojure/core.memoize "0.5.6"]
                  [org.clojure/tools.logging "0.2.6"]]
   :main nepse-data.web
   :min-lein-version "2.0.0")
