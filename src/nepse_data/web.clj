@@ -40,6 +40,7 @@
 
 (defn -main [& args]
   (let [port (Integer/parseInt 
-               (or (System/getenv "PORT") "8080"))]
+              (or (System/getenv "PORT") "8080"))]
+    (scrape/update-html)
     (run-server application {:port port :join? false})
     (info "Server started. Listening on port " port)))

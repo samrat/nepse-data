@@ -24,10 +24,11 @@
   @html atom needs to get updated."}
   (atom false))
 
-(def update-html
-  ^{:doc "Updates html in a separate thread. Whether the
+(defn update-html
+  "Updates html in a separate thread. Whether the
   market was open or closed in the last check determines when to make
-  the next check."}
+  the next check."
+  []
   (future (loop []
             (reset! html (get-html))
             (info "Fetched HTML from /datanepse/index.php")
