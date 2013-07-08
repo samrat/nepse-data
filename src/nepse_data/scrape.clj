@@ -7,17 +7,17 @@
   (:use nepse-data.utils
         [clojure.tools.logging :only [info]]))
 
-(def latest-share-url "http://nepalstock.com/datanepse/index.php")
+(def datanepse-url "http://nepalstock.com/datanepse/index.php")
 
 (defn get-html
   "Pulls and parses html"
   []
-  (-> (http/get latest-share-url)
+  (-> (http/get datanepse-url)
       :body
       l/parse))
 
 (def html
-  ^{:doc "Caches parsed HTML of latest-share-url. A thread updates this(see
+  ^{:doc "Caches parsed HTML of datanepse-url. A thread updates this(see
   update-html."}
   (atom (get-html)))
 
