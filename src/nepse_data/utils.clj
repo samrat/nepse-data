@@ -18,9 +18,7 @@
   [string]
   (-> (str/split string #" *%")
       first
-      (str/replace #"," "")
-      read-string
-      float))
+      read-string))
 
 (defn parse-string [string]
   (cond (.startsWith string "Rs.") (parse-rupees string)
@@ -29,8 +27,9 @@
         (re-find #"\-" string) string ;; dates
         (and (re-find #"\d+" string)
              (not (re-find #"[A-Za-z]+" string))) (-> string
-                                    (str/replace #"," "")
-                                    read-string)
+                                                      (str/replace #"," "")
+                                                      read-string
+                                                      biginteger)
         :else string))
 
 (defn node-text
