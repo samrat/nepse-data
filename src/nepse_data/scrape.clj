@@ -2,7 +2,8 @@
   (:require [me.raynes.laser :as l]
             [clj-http.client :as http]
             [clojure.string :as str]
-            [clojure.core.memoize :as memo])
+            [clojure.core.memoize :as memo]
+            [clj-time.core :as t])
   (:use nepse-data.utils
         [clojure.tools.logging :only [info]]))
 
@@ -26,17 +27,21 @@
   (atom false))
 
 (defn update-html
-  "Updates html in a separate thread. Whether the
-  market was open or closed in the last check determines when to make
-  the next check."
+  "Updates html in a separate thread. Decides when to update based on
+  the current time in Nepal(NPT). Updates every 30 seconds between
+  12:15 and 15:00. The fifteen minute lag at the beginning is due to
+  the absence of live-data when the trading floor has just opened."
   []
   (future (loop []
-            (reset! html (get-html))
-            (info "Fetched HTML from /datanepse/index.php")
-            (if @market-close
-              (do (info "Going to sleep for 21 hours")
-                  (Thread/sleep (* 60000 60 21)))
-              (Thread/sleep 30000))
+            (let [timestamp (t/to-time-zone (t/now)
+                                            (t/time-zone-for-offset 5 45))]
+              (when-not (or (and (= (t/hour timestamp) 12)
+                                 (< (t/minute timestamp) 15))
+                            (> (t/hour timestamp) 14) ;; up till 14:59
+                            (< (t/hour timestamp) 12))
+                (reset! html (get-html))
+                (info "Fetched HTML from /datanepse/index.php")))
+            (Thread/sleep 30000)
             (recur))))
 
 (defn market-open?
@@ -54,12 +59,10 @@
                               (l/select (l/class= "dataTable"))
                               (nth 2)
                               l/zip)
-        [nepse sensitive] (try
-                            (-> market-info-table
-                                (l/select (l/class= "row1"))
-                                (l/zip)
-                                (#(map tr->vec %)))
-                            (catch Exception _ {:market-open false}))
+        [nepse sensitive] (-> market-info-table
+                              (l/select (l/class= "row1"))
+                              (l/zip)
+                              (#(map tr->vec %)))
         index-data (fn [idx]
                      {:current (-> (second idx)
                                    parse-string)
@@ -86,15 +89,14 @@
     (let [marquee (-> @html
                       (l/select (l/element= "marquee"))
                       first)
-          datetime (try (->> marquee
-                             node-text
-                             (#(str/replace % "\u00a0" "")) ;; nbsp characters
-                             (re-seq
-                              #"As of ((\d{4})-(\d{2})-(\d{2}) *(\d{2}):(\d{2}):(\d{2}))")
-                             first
-                             (drop 2)
-                             (apply format "%s-%s-%sT%s:%s:%s+05:45"))
-                        (catch Exception _ {:market-open false}))]
+          datetime (->> marquee
+                        node-text
+                        (#(str/replace % "\u00a0" "")) ;; nbsp characters
+                        (re-seq
+                         #"As of ((\d{4})-(\d{2})-(\d{2}) *(\d{2}):(\d{2}):(\d{2}))")
+                        first
+                        (drop 2)
+                        (apply format "%s-%s-%sT%s:%s:%s+05:45"))]
       (merge
        {:market-open true
         :datetime datetime
