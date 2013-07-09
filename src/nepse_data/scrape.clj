@@ -200,36 +200,28 @@
                              (#(map tr->vec %)))
         all-vals (concat (first first-table-vals)
                          (first second-table-vals))]
-    (if (and (= first-table-row-title ["Last Traded Date"
-                                       "Last Trade Price"
-                                       "Net Chg."
-                                       "%Change"
-                                       "High"
-                                       "Low"
-                                       "Previous Close"
-                                       "Quote"])
-             (= second-table-row-title ["Listed Shares"
-                                        "Paid Up Value"
-                                        "Total Paid Up Value"
-                                        "Closing Market Price"
-                                        "Market Capitalization"
-                                        "Market Capitalization Date"] ))
-      (zipmap [:last-traded-date :last-trade-price
-               :net-change-in-rs :percent-change
-               :high             :low
-               :previous-closing   :stock-symbol
-               :listed-shares    :paid-up-value
-               :total-paid-up-value :closing-market-price
-               :market-capitalization :market-capitalization-date]
-              (map parse-string all-vals))
-
-      (zipmap [:last-traded-date :last-trade-price
-               :net-change-in-rs :percent-change
-               :high             :low
-               :previous-closing   :stock-symbol
-               :listed-shares    :paid-up-value
-               :total-paid-up-value :closing-market-price
-               :market-capitalization :market-capitalization-date]
+    (zipmap [:last-traded-date :last-trade-price
+             :net-change-in-rs :percent-change
+             :high             :low
+             :previous-closing   :stock-symbol
+             :listed-shares    :paid-up-value
+             :total-paid-up-value :closing-market-price
+             :market-capitalization :market-capitalization-date]
+            (if (and (= first-table-row-title ["Last Traded Date"
+                                               "Last Trade Price"
+                                               "Net Chg."
+                                               "%Change"
+                                               "High"
+                                               "Low"
+                                               "Previous Close"
+                                               "Quote"])
+                     (= second-table-row-title ["Listed Shares"
+                                                "Paid Up Value"
+                                                "Total Paid Up Value"
+                                                "Closing Market Price"
+                                                "Market Capitalization"
+                                                "Market Capitalization Date"] ))
+              (map parse-string all-vals)
               (repeat "NA")))))
 
 (def ninety-days-info
