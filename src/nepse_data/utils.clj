@@ -6,11 +6,12 @@
   "Returns the extracted numerical value from a string in the format
   Rs.50 or Rs. 50."
   [string]
-  (-> (str/split string #"Rs. *")
-      second
-      (str/replace #"," "")
-      read-string
-      biginteger))
+  (try (-> (str/split string #"Rs. *")
+           second
+           (str/replace #"," "")
+           read-string
+           biginteger)
+       (catch Exception _ "NA")))
 
 (defn parse-percentage
   "Returns the extracted numerical value from a string in the format
