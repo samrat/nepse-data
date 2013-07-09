@@ -58,9 +58,7 @@
 (defn market-info
   []
   (let [market-info-table (-> @html
-                              (l/select (l/class= "dataTable"))
-                              (nth 2)
-                              l/zip)
+                              (nth-table 2))
         [nepse sensitive] (-> market-info-table
                               (l/select (l/class= "row1"))
                               (l/zip)
@@ -128,9 +126,7 @@
   when market is open, see live-data."
   []
   (let [trades-table (-> @html
-                         (l/select (l/class= "dataTable"))
-                         first
-                         l/zip)
+                         (nth-table 0))
         stock-symbols (map #(-> %
                                :content
                                second
@@ -175,9 +171,7 @@
         stock-page (l/parse (:body (http/get (format base-url stock-symbol))))
         ;; there are two tables in the stock details page.
         first-table (-> stock-page
-                        (l/select (l/class= "dataTable"))
-                        first
-                        l/zip)
+                        (nth-table 0))
         first-table-row-title (-> first-table
                                    (l/select (l/class= "rowtitle1"))
                                    first
@@ -188,9 +182,7 @@
                              l/zip
                              (#(map tr->vec %)))
         second-table (-> stock-page
-                        (l/select (l/class= "dataTable"))
-                        second
-                        l/zip)
+                         (nth-table 1))
         second-table-row-title (-> second-table
                                    (l/select (l/class= "rowtitle1"))
                                    first
@@ -235,9 +227,7 @@
                                                    "Submit" "Submit"}})
            parsed (l/parse (:body soup))
            trading-info-table (-> parsed
-                                  (l/select (l/class= "dataTable"))
-                                  second
-                                  l/zip)
+                                  (nth-table 1))
            trading-info-table-titles (-> trading-info-table
                                          (l/select (l/class= "rowtitle1"))
                                          second

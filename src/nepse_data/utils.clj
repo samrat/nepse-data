@@ -41,6 +41,14 @@
    (and (map? node) (not= :comment (:type node))) (str/join (map node-text (:content node)))
    :else ""))
 
+(defn nth-table
+  "Returns the nth dataTable from parsed-html as a hickory node."
+  [parsed-html idx]
+  (-> parsed-html
+      (l/select (l/class= "dataTable"))
+      (nth idx)
+      l/zip))
+
 (defn tr->vec
   [row]
   (-> row
