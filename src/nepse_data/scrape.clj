@@ -37,7 +37,9 @@
                                             (t/time-zone-for-offset 5 45))]
               (when-not (or (and (= (t/hour timestamp) 12)
                                  (< (t/minute timestamp) 15))
-                            (> (t/hour timestamp) 14) ;; up till 14:59
+                            (and (> (t/hour timestamp) 14) ;; up till 15:05
+                                 ;; 5 extra mins to update after market closes.
+                                 (> (t/minute timestamp) 5)) 
                             (< (t/hour timestamp) 12))
                 (reset! html (get-html))
                 (info "Fetched HTML from /datanepse/index.php")))
@@ -236,6 +238,11 @@
                                   (l/select (l/class= "dataTable"))
                                   second
                                   l/zip)
+           trading-info-table-titles (-> trading-info-table
+                                         (l/select (l/class= "rowtitle1"))
+                                         second
+                                         l/zip
+                                         tr->vec)
            company (-> trading-info-table
                        (l/select (l/class= "rowtitle1"))
                        first
