@@ -176,6 +176,11 @@
                         (l/select (l/class= "dataTable"))
                         first
                         l/zip)
+        first-table-row-title (-> first-table
+                                   (l/select (l/class= "rowtitle1"))
+                                   first
+                                   l/zip
+                                   tr->vec)
         first-table-vals (-> first-table
                              (l/select (l/class= "row1"))
                              l/zip
@@ -184,20 +189,48 @@
                         (l/select (l/class= "dataTable"))
                         second
                         l/zip)
+        second-table-row-title (-> second-table
+                                   (l/select (l/class= "rowtitle1"))
+                                   first
+                                   l/zip
+                                   tr->vec)
         second-table-vals (-> second-table
                              (l/select (l/class= "row1"))
                              l/zip
                              (#(map tr->vec %)))
         all-vals (concat (first first-table-vals)
                          (first second-table-vals))]
-    (zipmap [:last-traded-date :last-trade-price
-             :net-change-in-rs :percent-change
-             :high             :low
-             :previous-closing   :stock-symbol
-             :listed-shares    :paid-up-value
-             :total-paid-up-value :closing-market-price
-             :market-capitalization :market-capitalization-date]
-            (map parse-string all-vals))))
+    (if (and (= first-table-row-title ["Last Traded Date"
+                                       "Last Trade Price"
+                                       "Net Chg."
+                                       "%Change"
+                                       "High"
+                                       "Low"
+                                       "Previous Close"
+                                       "Quote"])
+             (= second-table-row-title ["Listed Shares"
+                                        "Paid Up Value"
+                                        "Total Paid Up Value"
+                                        "Closing Market Price"
+                                        "Market Capitalization"
+                                        "Market Capitalization Date"] ))
+      (zipmap [:last-traded-date :last-trade-price
+               :net-change-in-rs :percent-change
+               :high             :low
+               :previous-closing   :stock-symbol
+               :listed-shares    :paid-up-value
+               :total-paid-up-value :closing-market-price
+               :market-capitalization :market-capitalization-date]
+              (map parse-string all-vals))
+
+      (zipmap [:last-traded-date :last-trade-price
+               :net-change-in-rs :percent-change
+               :high             :low
+               :previous-closing   :stock-symbol
+               :listed-shares    :paid-up-value
+               :total-paid-up-value :closing-market-price
+               :market-capitalization :market-capitalization-date]
+              (repeat "NA")))))
 
 (def ninety-days-info
   ^{:doc "Show trading details for stock-symbol in the last 90 days."}
