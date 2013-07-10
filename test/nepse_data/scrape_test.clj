@@ -3,7 +3,7 @@
         [nepse-data.scrape])
   (:require [me.raynes.laser :as l]))
 
-(future-cancel update-html)
+;;(future-cancel update-html)
 
 (deftest market-status-closed
   (reset! html (l/parse (slurp "test/datanepse20130629.html")))

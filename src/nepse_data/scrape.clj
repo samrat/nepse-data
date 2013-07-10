@@ -22,13 +22,13 @@
   (atom (get-html)))
 
 (defn- ->npt
-  "Converts any time to NPT."
+  "Converts any time to Nepal Time(NPT)."
   [time]
   (t/to-time-zone time
                   (t/time-zone-for-offset 5 45)))
 
 (defn- npt
-  "Tell clj-time that the datetime passed is in NPT."
+  "Tell clj-time that the datetime passed is in Nepal Time(NPT)."
   [datetime]
   (t/from-time-zone datetime
                     (t/time-zone-for-offset 5 45)))
@@ -96,29 +96,28 @@
                          #"As of ((\d{4})-(\d{2})-(\d{2}) *(\d{2}):(\d{2}):(\d{2}))")
                         first
                         (drop 2)
+                        (t/unparse (t/formatters :date-time-no-ms))
                         (apply format "%s-%s-%sT%s:%s:%s+05:45"))]
-      (merge
-       {:market-open true
-        :datetime datetime
-        :transactions (->> marquee
-                           :content
-                           (remove #(= (:tag %) :img))
-                           (map l/text)
-                           (partition 3)
-                           (map str/join)
-                           (map #(re-find #"(\S+) (\S+) \( +(\S+) \) \( +(\S+) \)" %))
-                           (map #(zipmap [:stock-symbol  :latest-trade-price
-                                          :shares-traded :net-change-in-rs]
-                                         (map parse-string (drop 1 %))))
-                           (map #(assoc % :percent-change
-                                        (try
-                                          (with-precision 3
-                                            (* 100M
-                                               (/ (get % :net-change-in-rs)
-                                                  (- (get % :latest-trade-price)
-                                                     (get % :net-change-in-rs)))))
-                                          (catch Exception _ 0)))))}
-       (market-info)))
+      {:market-open true
+       :datetime datetime
+       :transactions (->> marquee
+                          :content
+                          (remove #(= (:tag %) :img))
+                          (map l/text)
+                          (partition 3)
+                          (map str/join)
+                          (map #(re-find #"(\S+) (\S+) \( +(\S+) \) \( +(\S+) \)" %))
+                          (map #(zipmap [:stock-symbol  :latest-trade-price
+                                         :shares-traded :net-change-in-rs]
+                                        (map parse-string (drop 1 %))))
+                          (map #(assoc % :percent-change
+                                       (try
+                                         (with-precision 3
+                                           (* 100M
+                                              (/ (get % :net-change-in-rs)
+                                                 (- (get % :latest-trade-price)
+                                                    (get % :net-change-in-rs)))))
+                                         (catch Exception _ 0)))))})
     {:market-open false}))
 
 (defn last-trading-day
