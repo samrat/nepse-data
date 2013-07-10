@@ -29,7 +29,7 @@
 (defn update-html
   "Updates html in a separate thread. Decides when to update based on
   the current time in Nepal(NPT). Updates every 30 seconds between
-  12:15 and 15:00. The fifteen minute lag at the beginning is due to
+  12:15 and 15:05. The fifteen minute lag at the beginning is due to
   the absence of live-data when the trading floor has just opened."
   []
   (future (loop []
@@ -39,7 +39,7 @@
                                  (< (t/minute timestamp) 15))
                             (and (> (t/hour timestamp) 14) ;; up till 15:05
                                  ;; 5 extra mins to update after market closes.
-                                 (> (t/minute timestamp) 5)) 
+                                 (> (t/minute timestamp) 5))
                             (< (t/hour timestamp) 12))
                 (reset! html (get-html))
                 (info "Fetched HTML from /datanepse/index.php")))
@@ -64,12 +64,8 @@
                               (l/zip)
                               (#(map tr->vec %)))
         index-data (fn [idx]
-                     {:current (-> (second idx)
-                                   parse-string)
-                      :points-change (-> (nth idx 2)
-                                         parse-string)
-                      :percent-change (-> (nth idx 3)
-                                          parse-string)})
+                     (zipmap [:current :points-change :percent-change]
+                             (map parse-string (drop 1 idx))))
         date (->> @html
                   first
                   node-text
@@ -147,7 +143,7 @@
                   first
                   node-text
                   (re-seq #"As of ((\d{4})-(\d{2})-(\d{2}))")
-                  second ;; the first appearance is at inside the <marquee>
+                  second ;; the first appearance is inside the <marquee>
                   second)]
     {:date date
      :transactions (->> (map #(zipmap [:company          :number-transactions
@@ -169,25 +165,23 @@
   [stock-symbol]
   (let [base-url "http://nepalstock.com/companydetail.php?StockSymbol=%s"
         stock-page (l/parse (:body (http/get (format base-url stock-symbol))))
+        table-row-title (fn [table]
+                          (-> table
+                              (l/select (l/class= "rowtitle1"))
+                              first
+                              l/zip
+                              tr->vec))
         ;; there are two tables in the stock details page.
         first-table (-> stock-page
                         (nth-table 0))
-        first-table-row-title (-> first-table
-                                   (l/select (l/class= "rowtitle1"))
-                                   first
-                                   l/zip
-                                   tr->vec)
+        first-table-row-title (table-row-title first-table)
         first-table-vals (-> first-table
                              (l/select (l/class= "row1"))
                              l/zip
                              (#(map tr->vec %)))
         second-table (-> stock-page
                          (nth-table 1))
-        second-table-row-title (-> second-table
-                                   (l/select (l/class= "rowtitle1"))
-                                   first
-                                   l/zip
-                                   tr->vec)
+        second-table-row-title (table-row-title second-table)
         second-table-vals (-> second-table
                              (l/select (l/class= "row1"))
                              l/zip
@@ -201,6 +195,7 @@
              :listed-shares    :paid-up-value
              :total-paid-up-value :closing-market-price
              :market-capitalization :market-capitalization-date]
+            
             (if (and (= first-table-row-title ["Last Traded Date"
                                                "Last Trade Price"
                                                "Net Chg."
