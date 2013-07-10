@@ -96,7 +96,6 @@
                          #"As of ((\d{4})-(\d{2})-(\d{2}) *(\d{2}):(\d{2}):(\d{2}))")
                         first
                         (drop 2)
-                        (t/unparse (t/formatters :date-time-no-ms))
                         (apply format "%s-%s-%sT%s:%s:%s+05:45"))]
       {:market-open true
        :datetime datetime
@@ -177,14 +176,14 @@
         ;; there are two tables in the stock details page.
         first-table (-> stock-page
                         (nth-table 0))
-        first-table-row-title (table-row-title first-table)
+        first-table-titles (table-row-title first-table)
         first-table-vals (-> first-table
                              (l/select (l/class= "row1"))
                              l/zip
                              (#(map tr->vec %)))
         second-table (-> stock-page
                          (nth-table 1))
-        second-table-row-title (table-row-title second-table)
+        second-table-titles (table-row-title second-table)
         second-table-vals (-> second-table
                              (l/select (l/class= "row1"))
                              l/zip
@@ -199,20 +198,8 @@
              :total-paid-up-value :closing-market-price
              :market-capitalization :market-capitalization-date]
             
-            (if (and (= first-table-row-title ["Last Traded Date"
-                                               "Last Trade Price"
-                                               "Net Chg."
-                                               "%Change"
-                                               "High"
-                                               "Low"
-                                               "Previous Close"
-                                               "Quote"])
-                     (= second-table-row-title ["Listed Shares"
-                                                "Paid Up Value"
-                                                "Total Paid Up Value"
-                                                "Closing Market Price"
-                                                "Market Capitalization"
-                                                "Market Capitalization Date"] ))
+            (if (= stock-details-titles
+                   [first-table-titles second-table-titles])
               (map parse-string all-vals)
               (repeat "NA")))))
 

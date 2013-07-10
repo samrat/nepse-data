@@ -55,3 +55,18 @@
       (#(map node-text %))
       (#(map str/trim %))
       vec))
+
+(def stock-details-titles [["Last Traded Date"
+                            "Last Trade Price"
+                            "Net Chg."
+                            "%Change"
+                            "High"
+                            "Low"
+                            "Previous Close"
+                            "Quote"]
+                           ["Listed Shares"
+                            "Paid Up Value"
+                            "Total Paid Up Value"
+                            "Closing Market Price"
+                            "Market Capitalization"
+                            "Market Capitalization Date"]])
