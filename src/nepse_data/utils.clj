@@ -29,8 +29,7 @@
         (and (re-find #"\d+" string)
              (not (re-find #"[A-Za-z]+" string))) (-> string
                                                       (str/replace #"," "")
-                                                      read-string
-                                                      biginteger)
+                                                      read-string)
         :else string))
 
 (defn node-text
