@@ -36,16 +36,24 @@
 (defn update-html
   "Updates html in a separate thread. Decides when to update based on
   the current time in Nepal(NPT). Updates every 30 seconds between
-  12:15 and 15:10. The fifteen minute lag at the beginning is due to
-  the absence of live-data when the trading floor has just opened."
+  12:00 and 15:10. When the market has just opened, no live-data is
+  seen for 15 minutes or so, which is why the marquee content is
+  checked."
   []
   (future (loop []
             (let [current-time (->npt (t/now))
                   [y m d] ((juxt t/year t/month t/day) current-time)
-                  market-open (t/interval (npt (t/date-time y m d 12 15))
-                                          (npt (t/date-time y m d 15 10)))]
-              (when (t/within? market-open current-time)
-                (reset! html (get-html))
+                  market-open (t/interval (npt (t/date-time y m d 12 00))
+                                          (npt (t/date-time y m d 15 10)))
+                  parsed (get-html)
+                  marquee-content (-> parsed
+                                      (l/select (l/element= "marquee"))
+                                      first
+                                      node-text
+                                      (.trim))]
+              (when (and (t/within? market-open current-time)
+                         (not (empty? marquee-content)))
+                (reset! html parsed)
                 (info "Fetched HTML from /datanepse/index.php")))
             (Thread/sleep 30000)
             (recur))))
