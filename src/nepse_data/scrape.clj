@@ -234,17 +234,18 @@
                     (l/select (l/class= "row1"))
                     l/zip
                     (#(map tr->vec %)))]
-       (-> (reduce (fn [m row]
-                     (assoc m (first row)
-                            (zipmap [:date                :total-transactions
-                                     :total-traded-shares :total-traded-amount
-                                     :open-price          :max-price
-                                     :min-price           :closing-price]
-                                    (map parse-string (rest row)))))
-                   {}
-                   rows)
-           (assoc :company company)
-           (assoc :stock-symbol stock-symbol))))
+       (when (not (empty? company))
+         (-> (reduce (fn [m row]
+                       (assoc m (first row)
+                              (zipmap [:date                :total-transactions
+                                       :total-traded-shares :total-traded-amount
+                                       :open-price          :max-price
+                                       :min-price           :closing-price]
+                                      (map parse-string (rest row)))))
+                     {}
+                     rows)
+             (assoc :company company)
+             (assoc :stock-symbol stock-symbol)))))
    :ttl/threshold (if (market-open?)
                     (* 1000 60 5)
                     (* 1000 60 60 3))))
