@@ -105,7 +105,8 @@
                           (map l/text)
                           (partition 3)
                           (map str/join)
-                          (map #(re-find #"(\S+) (\S+) \( +(\S+) \) \( +(\S+) \)" %))
+                          (map (partial re-find
+                                        #"(\S+) (\S+) \( +(\S+) \) \( +(\S+) \)"))
                           (map #(zipmap [:stock-symbol  :latest-trade-price
                                          :shares-traded :net-change-in-rs]
                                         (map parse-string (drop 1 %))))
@@ -126,14 +127,9 @@
   (let [trades-table (-> @html
                          (nth-table 0))
         stock-symbols (map #(-> %
-                               :content
-                               second
-                               :content
-                               first
-                               :attrs
-                               :href
-                               (str/split #"=")
-                               second)
+                                href
+                                (str/split #"=")
+                                second)
                            (-> trades-table
                                (l/select (l/class= "row1"))))
         rows (-> trades-table

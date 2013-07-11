@@ -56,6 +56,17 @@
       (#(map str/trim %))
       vec))
 
+(defn href
+  "Returns link from an <a> tag."
+  [a]
+  (-> a
+      :content
+      second
+      :content
+      first
+      :attrs
+      :href))
+
 (def stock-details-titles [["Last Traded Date"
                             "Last Trade Price"
                             "Net Chg."
