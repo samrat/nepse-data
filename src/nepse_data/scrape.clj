@@ -115,7 +115,7 @@
                           (map str/join)
                           (map (partial re-find
                                         #"(\S+) (\S+) \( +(\S+) \) \( +(\S+) \)"))
-                          (map #(zipmap [:stock-symbol  :latest-trade-price
+                          (map #(zipmap [:stock-symbol  :last-trade-price
                                          :shares-traded :net-change-in-rs]
                                         (map parse-string (drop 1 %))))
                           (map #(assoc % :percent-change
@@ -123,7 +123,7 @@
                                          (with-precision 3
                                            (* 100M
                                               (/ (get % :net-change-in-rs)
-                                                 (- (get % :latest-trade-price)
+                                                 (- (get % :last-trade-price)
                                                     (get % :net-change-in-rs)))))
                                          (catch Exception _ 0)))))})
     {:market-open false}))
