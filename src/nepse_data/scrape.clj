@@ -222,7 +222,7 @@
            ;; soup promise stores whatever the first future to return
            ;; gives it.
            soup (promise)
-           _ (futures 3 (deliver soup
+           _ (futures 5 (deliver soup
                                  (http/post base-url {:form-params
                                                       {"StockSymbol" stock-symbol
                                                        "Submit" "Submit"}})))
