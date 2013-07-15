@@ -205,12 +205,6 @@
               (map parse-string all-vals)
               (repeat "NA")))))
 
-(defmacro futures
-  [n & exprs]
-  (vec (for [_ (range n)
-             expr exprs]
-         `(future ~expr))))
-
 (def ninety-days-info
   ^{:doc "Show trading details for stock-symbol in the last 90 days."}
   (memo/ttl

@@ -81,3 +81,9 @@
                             "Closing Market Price"
                             "Market Capitalization"
                             "Market Capitalization Date"]])
+
+(defmacro futures
+  [n & exprs]
+  (vec (for [_ (range n)
+             expr exprs]
+         `(future ~expr))))
