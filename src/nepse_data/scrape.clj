@@ -36,15 +36,13 @@
 (defn update-html
   "Updates html in a separate thread. Decides when to update based on
   the current time in Nepal(NPT). Updates every 30 seconds between
-  12:00 and 15:10. When the market has just opened, no live-data is
-  seen for 15 minutes or so, which is why the marquee content is
-  checked."
+  12:00 and 15:30."
   []
   (future (loop []
             (let [current-time (->npt (t/now))
                   [y m d] ((juxt t/year t/month t/day) current-time)
                   market-open (t/interval (npt (t/date-time y m d 12 00))
-                                          (npt (t/date-time y m d 15 10)))
+                                          (npt (t/date-time y m d 15 30)))
                   parsed (get-html)
                   marquee-content (-> parsed
                                       (l/select (l/element= "marquee"))
