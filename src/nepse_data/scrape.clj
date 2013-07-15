@@ -205,14 +205,28 @@
               (map parse-string all-vals)
               (repeat "NA")))))
 
+(defmacro futures
+  [n & exprs]
+  (vec (for [_ (range n)
+             expr exprs]
+         `(future ~expr))))
+
 (def ninety-days-info
   ^{:doc "Show trading details for stock-symbol in the last 90 days."}
   (memo/ttl
    (fn [stock-symbol]
      (let [base-url "http://nepalstock.com/datanepse/stockWisePrices.php"
-           soup (http/post base-url {:form-params {"StockSymbol" stock-symbol
-                                                   "Submit" "Submit"}})
-           parsed (l/parse (:body soup))
+           ;; Because the info sometimes takes a while to return from NEPSE, it
+           ;; is quite prone to request timeouts. Hence, multiple
+           ;; threads are spawned to send the same POST request. The
+           ;; soup promise stores whatever the first future to return
+           ;; gives it.
+           soup (promise)
+           _ (futures 3 (deliver soup
+                                 (http/post base-url {:form-params
+                                                      {"StockSymbol" stock-symbol
+                                                       "Submit" "Submit"}})))
+           parsed (l/parse (:body @soup))
            trading-info-table (-> parsed
                                   (nth-table 1))
            trading-info-table-titles (-> trading-info-table
