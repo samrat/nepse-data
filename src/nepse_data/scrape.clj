@@ -39,20 +39,21 @@
   12:00 and 15:30."
   []
   (future (loop []
-            (let [current-time (->npt (t/now))
-                  [y m d] ((juxt t/year t/month t/day) current-time)
-                  market-open (t/interval (npt (t/date-time y m d 12 00))
-                                          (npt (t/date-time y m d 15 30)))
-                  parsed (get-html)
-                  marquee-content (-> parsed
-                                      (l/select (l/element= "marquee"))
-                                      first
-                                      node-text
-                                      (.trim))]
-              (when (and (t/within? market-open current-time)
-                         (not (empty? marquee-content)))
-                (reset! html parsed)
-                (info "Fetched HTML from /datanepse/index.php")))
+            (future
+              (let [current-time (->npt (t/now))
+                    [y m d] ((juxt t/year t/month t/day) current-time)
+                    market-open (t/interval (npt (t/date-time y m d 10 00))
+                                            (npt (t/date-time y m d 15 30)))
+                    parsed (get-html)
+                    marquee-content (-> parsed
+                                        (l/select (l/element= "marquee"))
+                                        first
+                                        node-text
+                                        (.trim))]
+                (when (and (t/within? market-open current-time)
+                           (not (empty? marquee-content)))
+                  (reset! html parsed)
+                  (info "Fetched HTML from /datanepse/index.php"))))
             (Thread/sleep 30000)
             (recur))))
 
@@ -216,7 +217,7 @@
            ;; soup promise stores whatever the first future to return
            ;; gives it.
            soup (promise)
-           _ (futures 5 (deliver soup
+           _ (futures 3 (deliver soup
                                  (http/post base-url {:form-params
                                                       {"StockSymbol" stock-symbol
                                                        "Submit" "Submit"}})))
@@ -228,18 +229,18 @@
                                          second
                                          l/zip
                                          tr->vec)
-           company (-> trading-info-table
-                       (l/select (l/class= "rowtitle1"))
-                       first
-                       node-text
-                       (.trim)
-                       (str/split #"\(")
-                       first
-                       (.trim))
-           rows (-> trading-info-table
-                    (l/select (l/class= "row1"))
-                    l/zip
-                    (#(map tr->vec %)))]
+           company (some-> trading-info-table
+                           (l/select (l/class= "rowtitle1"))
+                           first
+                           node-text
+                           (.trim)
+                           (str/split #"\(")
+                           first
+                           (.trim))
+           rows (some-> trading-info-table
+                        (l/select (l/class= "row1"))
+                        l/zip
+                        (#(map tr->vec %)))]
        (when (not (empty? company))
          (-> (reduce (fn [m row]
                        (assoc m (first row)
