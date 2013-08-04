@@ -208,54 +208,50 @@
 
 (def ninety-days-info
   ^{:doc "Show trading details for stock-symbol in the last 90 days."}
-  (memo/ttl
-   (fn [stock-symbol]
-     (let [base-url "http://nepalstock.com/datanepse/stockWisePrices.php"
-           ;; Because the info sometimes takes a while to return from NEPSE, it
-           ;; is quite prone to request timeouts. Hence, multiple
-           ;; threads are spawned to send the same POST request. The
-           ;; soup promise stores whatever the first future to return
-           ;; gives it.
-           soup (promise)
-           _ (futures 3 (deliver soup
-                                 (http/post base-url {:form-params
-                                                      {"StockSymbol" stock-symbol
-                                                       "Submit" "Submit"}})))
-           parsed (l/parse (:body @soup))
-           trading-info-table (-> parsed
-                                  (nth-table 1))
-           trading-info-table-titles (-> trading-info-table
-                                         (l/select (l/class= "rowtitle1"))
-                                         second
-                                         l/zip
-                                         tr->vec)
-           company (some-> trading-info-table
-                           (l/select (l/class= "rowtitle1"))
-                           first
-                           node-text
-                           (.trim)
-                           (str/split #"\(")
-                           first
-                           (.trim))
-           rows (some-> trading-info-table
-                        (l/select (l/class= "row1"))
-                        l/zip
-                        (#(map tr->vec %)))]
-       (when (not (empty? company))
-         (-> (reduce (fn [m row]
-                       (assoc m (first row)
-                              (zipmap [:date                :total-transactions
-                                       :total-traded-shares :total-traded-amount
-                                       :open-price          :max-price
-                                       :min-price           :closing-price]
-                                      (map parse-string (rest row)))))
-                     {}
-                     rows)
-             (assoc :company company)
-             (assoc :stock-symbol stock-symbol)))))
-   :ttl/threshold (if (market-open?)
-                    (* 1000 60 5)
-                    (* 1000 60 60 3))))
+  (fn [stock-symbol]
+    (let [base-url "http://nepalstock.com/datanepse/stockWisePrices.php"
+          ;; Because the info sometimes takes a while to return from NEPSE, it
+          ;; is quite prone to request timeouts. Hence, multiple
+          ;; threads are spawned to send the same POST request. The
+          ;; soup promise stores whatever the first future to return
+          ;; gives it.
+          soup (promise)
+          _ (futures 3 (deliver soup
+                                (http/post base-url {:form-params
+                                                     {"StockSymbol" stock-symbol
+                                                      "Submit" "Submit"}})))
+          parsed (l/parse (:body @soup))
+          trading-info-table (-> parsed
+                                 (nth-table 1))
+          trading-info-table-titles (-> trading-info-table
+                                        (l/select (l/class= "rowtitle1"))
+                                        second
+                                        l/zip
+                                        tr->vec)
+          company (some-> trading-info-table
+                          (l/select (l/class= "rowtitle1"))
+                          first
+                          node-text
+                          (.trim)
+                          (str/split #"\(")
+                          first
+                          (.trim))
+          rows (some-> trading-info-table
+                       (l/select (l/class= "row1"))
+                       l/zip
+                       (#(map tr->vec %)))]
+      (when (not (empty? company))
+        (-> (reduce (fn [m row]
+                      (assoc m (first row)
+                             (zipmap [:date                :total-transactions
+                                      :total-traded-shares :total-traded-amount
+                                      :open-price          :max-price
+                                      :min-price           :closing-price]
+                                     (map parse-string (rest row)))))
+                    {}
+                    rows)
+            (assoc :company company)
+            (assoc :stock-symbol stock-symbol))))))
 
 (defn listed-companies
   "Returns a list of stock symbols listed at NEPSE. This also includes

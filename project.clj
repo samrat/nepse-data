@@ -12,6 +12,8 @@
                  [http-kit "2.1.4"]
                  [ring-cors "0.1.0"]
                  [clj-time "0.5.1"]
+                 [org.clojure/java.jdbc "0.3.0-alpha4"]
+                 [org.postgresql/postgresql "9.2-1003-jdbc4"]
                  [org.clojure/core.memoize "0.5.6"]
                  [org.clojure/tools.logging "0.2.6"]]
   :main nepse-data.web
