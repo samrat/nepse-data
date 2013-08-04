@@ -256,3 +256,20 @@
    :ttl/threshold (if (market-open?)
                     (* 1000 60 5)
                     (* 1000 60 60 3))))
+
+(defn listed-companies
+  "Returns a list of stock symbols listed at NEPSE. This also includes
+  government bonds, which NEPSE lists on their website for some
+  reason."
+  []
+  (let [base-url "http://nepalstock.com/datanepse/stockWisePrices.php"
+        soup (:body (http/get base-url))
+        parsed (l/parse soup)
+        drop-down (-> (l/select parsed
+                                (l/element= "select"))
+                      first
+                      :content)
+        companies (remove #{"Choose"}
+                          (remove nil?
+                                  (map (comp first :content) drop-down)))]
+    companies))
