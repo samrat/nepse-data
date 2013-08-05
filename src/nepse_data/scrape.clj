@@ -210,17 +210,12 @@
   ^{:doc "Show trading details for stock-symbol in the last 90 days."}
   (fn [stock-symbol]
     (let [base-url "http://nepalstock.com/datanepse/stockWisePrices.php"
-          ;; Because the info sometimes takes a while to return from NEPSE, it
-          ;; is quite prone to request timeouts. Hence, multiple
-          ;; threads are spawned to send the same POST request. The
-          ;; soup promise stores whatever the first future to return
-          ;; gives it.
-          soup (promise)
-          _ (futures 3 (deliver soup
-                                (http/post base-url {:form-params
-                                                     {"StockSymbol" stock-symbol
-                                                      "Submit" "Submit"}})))
-          parsed (l/parse (:body @soup))
+          ;; TODO- find a way to go around the long time requests to NEPSE
+          ;; takes sometimes.
+          soup (http/post base-url {:form-params
+                                    {"StockSymbol" stock-symbol
+                                     "Submit" "Submit"}})
+          parsed (l/parse (:body soup))
           trading-info-table (-> parsed
                                  (nth-table 1))
           trading-info-table-titles (-> trading-info-table
