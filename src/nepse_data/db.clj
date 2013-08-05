@@ -5,7 +5,11 @@
             )
   (:use [nepse-data.scrape :only [listed-companies
                                   ninety-days-info]]
-        [clj-time.coerce :only [to-sql-date]]))
+        [clj-time.coerce :only [to-sql-date
+                                from-sql-date
+                                to-date-time]]
+        [clj-time.core :exclude [extend]]
+        ))
 
 (def db "postgres://localhost:5432/mydb")
 
@@ -66,3 +70,29 @@
                                  day))
                         (assoc :symbol stock)
                         (assoc :date (to-sql-date (:date day))))))))
+
+(defn query-dates->npt
+  [query-results]
+  (map #(assoc % :date
+               (to-time-zone
+                (to-date-time (get % :date))
+                (time-zone-for-offset 5 45)))
+       query-results))
+
+(defn query-history
+  [stock & {:keys [start end days]
+            :or {days 90}}]
+  (cond (and start end) (query-dates->npt
+                         (jdbc/query db
+                                     (sql/select * {:historical :h}
+                                                 ["h.symbol = ? AND ? <= h.date AND h.date <= ? ORDER BY DATE"
+                                                  stock
+                                                  (to-sql-date start)
+                                                  (to-sql-date end)])))
+        days (query-dates->npt
+              (jdbc/query
+               db
+               (sql/select * {:historical :h}
+                           ["h.symbol = ? ORDER BY date DESC LIMIT ?"
+                            stock
+                            days])))))
