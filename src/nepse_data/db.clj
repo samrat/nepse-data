@@ -45,8 +45,9 @@
 
 (defn insert-history
   []
-  (doseq [stock (map :symbol (take 10 (companies)))
-          day (vals (apply dissoc (ninety-days-info stock)
+  (doseq [stock (map :symbol (companies))
+          day (vals (apply dissoc (try (ninety-days-info stock)
+                                       (catch Exception _))
                            [:company :stock-symbol]))]
     (when (empty?
            (jdbc/query db
