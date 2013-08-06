@@ -249,18 +249,18 @@
             (assoc :stock-symbol stock-symbol))))))
 
 (defn listed-companies
-  "Returns a list of stock symbols listed at NEPSE. This also includes
-  government bonds, which NEPSE lists on their website for some
-  reason."
+  "Returns a list of vectors containing stock symbols and their
+  corresponding companies listed at NEPSE. This also includes
+  government bonds, which NEPSE lists on their website."
   []
   (let [base-url "http://nepalstock.com/datanepse/stockWisePrices.php"
         soup (:body (http/get base-url))
         parsed (l/parse soup)
         drop-down (-> (l/select parsed
                                 (l/element= "select"))
-                      first
+                      second
                       :content)
-        companies (remove #{"Choose"}
-                          (remove nil?
-                                  (map (comp first :content) drop-down)))]
+        companies (remove #{[nil nil]}
+                          (map (juxt #(get-in % [:attrs :value])
+                                     (comp first :content)) drop-down))]
     companies))
